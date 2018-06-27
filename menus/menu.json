@@ -1,0 +1,30 @@
+{
+    "menu": [{
+        "id": "tools",
+        "submenu": [{
+            "label": "Generate JSon",
+            "id": "tools.json",
+            "submenu": [
+                { "label": "Generate Json...", "id": "tools.json.generate", "command": "json:generate" },
+                { "type": "separator" },
+                { "label": "Configure...", "id": "tools.json.configure", "command": "json:configure" }
+            ]
+        }]
+    }],
+    "context-menu": {
+        "#working-diagrams ul.listview": [{
+            "type": "separator"
+        }, {
+            "label": "Generate JSon",
+            "id": "working-diagrams.json.generate",
+            "command": "json:generateFromDiagram"
+        }],
+        "#diagram-canvas": [{
+            "type": "separator"
+        }, {
+            "label": "Generate JSon",
+            "id": "diagram-canvas.json.genarate",
+            "command": "json:generateFromDiagram"
+        }]
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "name": "staruml.json",
+    "title": "JSon",
+    "description": "StarUml module to generate JSon based on diagram model.",
+    "homepage": "https://github.com/kingsfriend/staruml.json",
+    "issues": "https://github.com/kingsfriend/staruml.json/issues",
+    "keywords": ["staruml", "json"],
+    "version": "0.0.1",
+    "author": {
+        "name": "kingsfriend",
+        "email": "kingsfriend@yahoo.com"
+    },
+    "license": "MIT",
+    "engines": {
+        "staruml": "^3.0.0"
+    }
+}
