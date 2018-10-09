@@ -10,14 +10,14 @@ function getOptions() {
 
 function _handleGenerate(base, path, options) {
     options = options || getOptions()
-    var diagrams = app.repository.select("@UMLDiagram");
+    var diagrams = app.repository.select("@UMLClassDiagram");
     if (!base) {
         app.elementListPickerDialog.showDialog('Select an UML Class Diagram to generate JSon data', diagrams).then(function({
             buttonId,
             returnValue
         }) {
             if (buttonId === 'ok') {
-                base = returnValue._parent;
+                base = returnValue;
 
                 if (!path) {
                     var files = app.dialogs.showOpenDialog('Select a folder where generated codes to be located', null, null, { properties: ['openDirectory'] })
@@ -46,8 +46,12 @@ function _handleGenerate(base, path, options) {
 }
 
 function _handleGenerateFromDiagram(path, options) {
-    var base = app.workingDiagrams.diagramManager.diagramEditor.diagram._parent;
-    _handleGenerate(base, path, options);
+    var base = app.workingDiagrams.diagramManager.diagramEditor.diagram;
+    if (base instanceof type.UMLClassDiagram) {
+        _handleGenerate(base, path, options);
+    } else {
+        app.toast.error("Failed: Generation apply only on UMLClassDiagram.")
+    }
 }
 
 function _handleConfigure() {

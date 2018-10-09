@@ -18,8 +18,12 @@ class JSonClass {
         for (i = 0, len = elem.operations.length; i < len; i++) {
             operations.push(new JSonOperation(elem.operations[i]));
         }
-        this.package = pkg;
-        this.name = elem.name;
+        var elemName = elem.name;
+        var name = (elemName.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(' ', ''),
+            tags = (elemName.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', '');
+        this.tags = tags;
+        this.name = name;
+        this.stereotype = elem.stereotype;
         this.visibility = elem.visibility;
         this.isAbstract = elem.isAbstract;
         this.operations = operations;
@@ -41,7 +45,6 @@ class JSonEnum {
         for (i = 0, len = elem.literals.length; i < len; i++) {
             literals.push(elem.literals[i].name);
         }
-        this.package = pkg;
         this.name = elem.name;
         this.visibility = elem.visibility;
         this.literals = literals;
@@ -66,7 +69,6 @@ class JSonInterface {
         for (i = 0, len = elem.operations.length; i < len; i++) {
             operations.push(new JSonOperation(elem.operations[i]));
         }
-        this.package = pkg;
         this.name = elem.name;
         this.visibility = elem.visibility;
         this.isAbstract = elem.isAbstract;
@@ -83,7 +85,20 @@ class JSonAttribute {
      * @constructor
      */
     constructor(elem) {
+        var elemType = elem.type;
+        var type = (elemType.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(' ', ''),
+            tags = (elemType.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', ''),
+            required = elemType.includes('*');
+        this.type = type;
+        this.tags = tags;
+        this.required = required;
         this.name = elem.name;
+        this.visibility = elem.visibility;
+        this.aggregation = elem.aggregation;
+        this.defaultValue = elem.defaultValue;
+        this.isReadOnly = elem.isReadOnly;
+        this.isStatic = elem.isStatic;
+        this.isUnique = elem.isUnique;
         this.visibility = elem.visibility;
     }
 }
@@ -115,32 +130,25 @@ class JsonGenerator {
     generate(elem, outputPath, basePackage, options) {
         var pkgName, fullPath;
 
-        if (elem instanceof type.UMLModel) {
-            if (Array.isArray(elem.ownedElements)) {
-                elem.ownedElements.forEach(child => {
-                    return this.generate(child, outputPath, basePackage, options)
+        if (elem instanceof type.UMLClassDiagram) {
+            if (Array.isArray(elem.ownedViews)) {
+                var dirPath = outputPath + '/' + elem.name;
+                var classPath = this.onPrepareFileStart(dirPath, 'class');
+                var enumPath = this.onPrepareFileStart(dirPath, 'enum');
+                elem.ownedViews.forEach(child => {
+                    return this.generate(child.model, dirPath, basePackage, options)
                 })
+                this.onPrepareFileFinish(classPath);
+                this.onPrepareFileFinish(enumPath);
             }
-            return;
-        }
-        if (elem instanceof type.UMLPackage) {
-            pkgName = this.joinPkgName(basePackage, elem);
-            fullPath = path.join(outputPath, elem.name)
-            this.onPreparePackageStart(fullPath);
-            if (Array.isArray(elem.ownedElements)) {
-                elem.ownedElements.forEach(child => {
-                    return this.generate(child, fullPath, pkgName, options)
-                })
-            }
-            this.onPreparePackageFinish(fullPath);
             return;
         }
         if (elem instanceof type.UMLClass) {
-            this.writeClass(outputPath, basePackage, elem, options);
+            return this.writeClass(outputPath, basePackage, elem, options);
         } else if (elem instanceof type.UMLInterface) {
-            this.writeInterface(outputPath, basePackage, elem, options);
+            return this.writeInterface(outputPath, basePackage, elem, options);
         } else if (elem instanceof type.UMLEnumeration) {
-            this.writeEnumeration(outputPath, basePackage, elem, options);
+            return this.writeEnumeration(outputPath, basePackage, elem, options);
         }
     }
 
@@ -171,67 +179,51 @@ class JsonGenerator {
         }
     }
 
-    onPreparePackageStart(pkgPath) {
-        this.deleteFolderRecursive(pkgPath)
-        fs.mkdirSync(pkgPath);
-        var classPath = path.join(pkgPath, 'class.json');
-        var interfacePath = path.join(pkgPath, 'interface.json');
-        var enumPath = path.join(pkgPath, 'enum.json');
+    onPrepareFileStart(pkgPath, fileName) {
+        if (!fs.existsSync(pkgPath) || !fs.lstatSync(pkgPath).isDirectory()) {
+            fs.mkdirSync(pkgPath);
+        }
+        var classPath = path.join(pkgPath, fileName + '.json');
+        if (fs.existsSync(classPath)) {
+            fs.unlinkSync(classPath);
+        }
         fs.writeFileSync(classPath, '[', { flag: 'a+' })
-        fs.writeFileSync(interfacePath, '[', { flag: 'a+' })
-        fs.writeFileSync(enumPath, '[', { flag: 'a+' })
+        return classPath;
     }
 
-    onPreparePackageFinish(pkgPath) {
-        var classPath = path.join(pkgPath, 'class.json');
-        var interfacePath = path.join(pkgPath, 'interface.json');
-        var enumPath = path.join(pkgPath, 'enum.json');
-        if (fs.statSync(classPath).size == 1) {
-            fs.unlinkSync(classPath);
+    onPrepareFileFinish(filePath) {
+        if (fs.statSync(filePath).size == 1) {
+            fs.unlinkSync(filePath);
         } else {
-            fs.writeFileSync(classPath, '\n]', { flag: 'a+' })
+            fs.writeFileSync(filePath, ']', { flag: 'a+' })
         }
-        if (fs.statSync(interfacePath).size == 1) {
-            fs.unlinkSync(interfacePath);
-        } else {
-            fs.writeFileSync(interfacePath, '\n]', { flag: 'a+' })
-        }
-        if (fs.statSync(enumPath).size == 1) {
-            fs.unlinkSync(enumPath);
-        } else {
-            fs.writeFileSync(enumPath, '\n]', { flag: 'a+' })
-        }
-        fs.readdir(pkgPath, function(err, files) {
-            if (!err && !files.length) {
-                fs.rmdirSync(pkgPath);
-            }
-        });
     }
 
     appentToFileAsJsonRecord(filePath, obj) {
-        fs.writeFileSync(filePath, '\n' + JSON.stringify(obj) + ',', {
+        fs.writeFileSync(filePath, JSON.stringify(obj) + ',', {
             flag: 'a+'
         })
     }
 
     writeClass(basePath, pkgName, elem, options) {
         var fullPath = path.join(basePath, 'class.json');
-        var obj = new JSonClass(pkgName, elem)
-        this.appentToFileAsJsonRecord(fullPath, obj)
+        var obj = new JSonClass(pkgName, elem);
+        this.appentToFileAsJsonRecord(fullPath, obj);
+        return fullPath;
     }
 
     writeInterface(basePath, pkgName, elem, options) {
         var fullPath = path.join(basePath, 'interface.json');
         var obj = new JSonInterface(pkgName, elem)
         this.appentToFileAsJsonRecord(fullPath, obj)
-
+        return fullPath;
     }
 
     writeEnumeration(basePath, pkgName, elem, options) {
         var fullPath = path.join(basePath, 'enum.json');
         var obj = new JSonEnum(pkgName, elem)
         this.appentToFileAsJsonRecord(fullPath, obj)
-
+        return fullPath;
     }
 
     getElementName(elem) {
