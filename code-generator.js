@@ -19,7 +19,7 @@ class JSonClass {
             operations.push(new JSonOperation(elem.operations[i]));
         }
         var elemName = elem.name;
-        var name = (elemName.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(' ', ''),
+        var name = (elemName.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
             tags = (elemName.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', '');
         this.tags = tags;
         this.name = name;
@@ -45,7 +45,7 @@ class JSonEnum {
         for (i = 0, len = elem.literals.length; i < len; i++) {
             literals.push(elem.literals[i].name);
         }
-        this.name = elem.name;
+        this.name = elem.name.replace(/\s+/, '');
         this.visibility = elem.visibility;
         this.literals = literals;
 
@@ -69,7 +69,7 @@ class JSonInterface {
         for (i = 0, len = elem.operations.length; i < len; i++) {
             operations.push(new JSonOperation(elem.operations[i]));
         }
-        this.name = elem.name;
+        this.name = elem.name.replace(/\s+/, '');
         this.visibility = elem.visibility;
         this.isAbstract = elem.isAbstract;
         this.operations = operations;
@@ -86,13 +86,13 @@ class JSonAttribute {
      */
     constructor(elem) {
         var elemType = elem.type;
-        var type = (elemType.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(' ', ''),
+        var type = (elemType.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
             tags = (elemType.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', ''),
             required = elemType.includes('*');
         this.type = type;
         this.tags = tags;
         this.required = required;
-        this.name = elem.name;
+        this.name = elem.name.replace(/\s+/, '');
         this.visibility = elem.visibility;
         this.aggregation = elem.aggregation;
         this.defaultValue = elem.defaultValue;
@@ -111,7 +111,7 @@ class JSonOperation {
      * @constructor
      */
     constructor(elem) {
-        this.name = elem.name;
+        this.name = elem.name.replace(/\s+/, '');
         this.visibility = elem.visibility;
     }
 }
@@ -125,6 +125,8 @@ class JsonGenerator {
         this.baseModel = baseModel
         this.basePath = basePath
         this.basePackage = '';
+        this.separators = {};
+        this.arrays = {};
     }
 
     generate(elem, outputPath, basePackage, options) {
@@ -187,22 +189,27 @@ class JsonGenerator {
         if (fs.existsSync(classPath)) {
             fs.unlinkSync(classPath);
         }
-        fs.writeFileSync(classPath, '[', { flag: 'a+' })
+        this.separators[classPath] = "";
+        this.arrays[classPath] = [];
         return classPath;
     }
 
     onPrepareFileFinish(filePath) {
-        if (fs.statSync(filePath).size == 1) {
-            fs.unlinkSync(filePath);
-        } else {
-            fs.writeFileSync(filePath, ']', { flag: 'a+' })
-        }
+        fs.writeFileSync(filePath, JSON.stringify(this.arrays[filePath], null, 4), {
+            flag: 'a+'
+        })
     }
 
     appentToFileAsJsonRecord(filePath, obj) {
-        fs.writeFileSync(filePath, JSON.stringify(obj) + ',', {
+        this.arrays[filePath].push(obj);
+        /*var separator = this.separators[filePath];
+
+        fs.writeFileSync(filePath, separator + JSON.stringify(obj), {
             flag: 'a+'
         })
+        if (separator == "") {
+            this.separators[filePath] = ",";
+        }//*/
     }
 
     writeClass(basePath, pkgName, elem, options) {
