@@ -139,8 +139,8 @@ class JsonGenerator {
                 elem.ownedViews.forEach(child => {
                     return this.generate(child.model, dirPath, basePackage, options)
                 })
-                this.onPrepareFileFinish(classPath);
-                this.onPrepareFileFinish(enumPath);
+                this.onPrepareFileFinish(classPath,dirPath);
+                this.onPrepareFileFinish(enumPath,dirPath);
             }
             return;
         }
@@ -193,10 +193,18 @@ class JsonGenerator {
         return classPath;
     }
 
-    onPrepareFileFinish(filePath) {
+    onPrepareFileFinish(filePath, dirPath) {
         fs.writeFileSync(filePath, JSON.stringify(this.arrays[filePath], null, 4), {
             flag: 'a+'
-        })
+        });
+        const fileSize = fs.statSync(filePath).size;
+        if(fileSize<=2){
+            var logPath = dirPath+'/log.txt';
+            fs.writeFileSync(logPath, 'Empty file: "'+filePath+'" deleted.\n', {
+                flag: 'a+'
+            });
+            fs.unlinkSync(filePath);
+        }
     }
 
     appentToFileAsJsonRecord(filePath, obj) {
