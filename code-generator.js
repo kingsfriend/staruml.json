@@ -19,8 +19,8 @@ class JSonClass {
             operations.push(new JSonOperation(elem.operations[i]));
         }
         var elemName = elem.name;
-        var name = (elemName.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
-            tags = (elemName.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', '');
+        var name = (String(elemName).match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
+            tags = (String(elemName).match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', '');
         this.tags = tags;
         this.name = name;
         this.stereotype = elem.stereotype;
@@ -86,9 +86,9 @@ class JSonAttribute {
      */
     constructor(elem) {
         var elemType = elem.type;
-        var type = (elemType.match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
-            tags = (elemType.match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', ''),
-            required = elemType.includes('*');
+        var type = (String(elemType).match(/^[^\{]+/) || [''])[0].replace('*', '').replace(/\s+/, ''),
+            tags = (String(elemType).match(/\{[^\}]+/) || [''])[0].replace('{', '').replace('}', ''),
+            required = String(elemType).includes('*');
         this.type = type;
         this.tags = tags;
         this.required = required;
@@ -131,7 +131,6 @@ class JsonGenerator {
 
     generate(elem, outputPath, basePackage, options) {
         var pkgName, fullPath;
-
         if (elem instanceof type.UMLClassDiagram) {
             if (Array.isArray(elem.ownedViews)) {
                 var dirPath = outputPath + '/' + elem.name;
@@ -147,8 +146,8 @@ class JsonGenerator {
         }
         if (elem instanceof type.UMLClass) {
             return this.writeClass(outputPath, basePackage, elem, options);
-        } else if (elem instanceof type.UMLInterface) {
-            return this.writeInterface(outputPath, basePackage, elem, options);
+        //} else if (elem instanceof type.UMLInterface) {
+        //    return this.writeInterface(outputPath, basePackage, elem, options);
         } else if (elem instanceof type.UMLEnumeration) {
             return this.writeEnumeration(outputPath, basePackage, elem, options);
         }
